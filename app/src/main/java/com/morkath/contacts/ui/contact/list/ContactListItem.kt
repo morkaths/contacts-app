@@ -22,13 +22,13 @@ import com.morkath.contacts.domain.model.Contact
 @Composable
 fun ContactListItem(
     contact: Contact,
-    onClick: (Contact) -> Unit
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            .clickable { onClick(contact) },
+            .padding(horizontal = 6.dp, vertical = 6.dp)
+            .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -38,7 +38,7 @@ fun ContactListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar placeholder
@@ -82,7 +82,7 @@ fun ContactListItemPreview() {
     MaterialTheme {
         ContactListItem(
             contact = Contact(1, "Preview Contact", "0123456789"),
-            onClick = {}
+            onClick = { 1 }
         )
     }
 }

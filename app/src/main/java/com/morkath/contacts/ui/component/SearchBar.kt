@@ -44,28 +44,28 @@ fun SearchBar(
                 shape = RoundedCornerShape(50.dp)
             )
             .clickable(onClick = onClick)
-            .height(46.dp),
+            .height(50.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = "Search Icon",
                 tint = Color.Gray,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .size(26.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Search...",
                 color = Color.Gray,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(10.dp))
             IconButton(
                 onClick = onAvatarClick,
                 modifier = Modifier.size(48.dp)

@@ -17,6 +17,8 @@ import androidx.navigation.compose.rememberNavController
 import com.morkath.contacts.ui.component.SearchBar
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.domain.model.Contact
+import com.morkath.contacts.ui.component.CustomBottomBar
+import com.morkath.contacts.ui.component.CustomFAB
 
 val sampleContacts = mutableStateListOf(
     Contact(
@@ -54,6 +56,7 @@ fun ContactListScreen(
     context: Context,
     navController: NavController,
 ) {
+    var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -63,6 +66,12 @@ fun ContactListScreen(
                     .padding(10.dp),
                 onClick = { navController.navigate("search") }
             )
+        },
+        bottomBar = {
+            CustomBottomBar()
+        },
+        floatingActionButton = {
+            CustomFAB(onClick = { navController.navigate("add_contact") })
         }
     ) { innerPadding ->
         Column(
@@ -86,9 +95,15 @@ fun ContactListScreen(
     }
 }
 
+@Composable
+fun CustomBottomBar() {
+    TODO("Not yet implemented")
+}
+
 fun makeCall(context: Context, phoneNumber: String) {
-    val intent = Intent(Intent.ACTION_CALL)
-    intent.data = "tel:$phoneNumber".toUri()
+    val intent = Intent(Intent.ACTION_DIAL).apply {
+        data = "tel:$phoneNumber".toUri()
+    }
     context.startActivity(intent)
 }
 

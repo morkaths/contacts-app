@@ -12,6 +12,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.internal.NavContext
+import com.morkath.contacts.domain.model.Contact
+import com.morkath.contacts.ui.contact.detail.ContactDetailScreen
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.ui.contact.list.ContactListScreen
 import com.morkath.contacts.ui.search.SearchScreen
