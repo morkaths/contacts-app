@@ -1,0 +1,88 @@
+package com.morkath.contacts.ui.contact.list
+
+import androidx.compose.foundation.background
+import androidx.compose.runtime.Composable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.graphics.Color
+import com.morkath.contacts.ui.theme.AvatarColors
+import com.morkath.contacts.domain.model.Contact
+
+
+@Composable
+fun ContactListItem(
+    contact: Contact,
+    onClick: (Contact) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clickable { onClick(contact) },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar placeholder
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        color = AvatarColors[contact.id.hashCode() % AvatarColors.size],
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Contact Avatar",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(24.dp))
+            // Contact details
+            Column {
+                Text(
+                    text = contact.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = contact.phoneNumber,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ContactListItemPreview() {
+    MaterialTheme {
+        ContactListItem(
+            contact = Contact(1, "Preview Contact", "0123456789"),
+            onClick = {}
+        )
+    }
+}
