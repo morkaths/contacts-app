@@ -32,7 +32,6 @@ interface ContactDao {
             OR phone_number LIKE '%' || :query || '%'
             OR email LIKE '%' || :query || '%'
             OR address LIKE '%' || :query || '%'
-            OR notes LIKE '%' || :query || '%'
     """)
     fun searchContacts(query: String): Flow<List<ContactEntity>>
 

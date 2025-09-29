@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.morkath.contacts.ui.theme.ContactsTheme
 
 @Composable
 fun CustomFAB(
@@ -29,7 +30,10 @@ fun CustomFAB(
 @Preview(showBackground = true)
 @Composable
 fun CustomFABPreview() {
-    MaterialTheme {
+    ContactsTheme(
+        darkTheme = true,
+        dynamicColor = false
+    ) {
         CustomFAB(
             onClick = { println("Click") }
         )

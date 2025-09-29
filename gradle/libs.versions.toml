@@ -14,6 +14,7 @@ hilt = "2.57.1"
 androidxHilt = "1.3.0"
 lottieVersion = "6.6.9"
 composeNavVersion = "2.9.4"
+lifecycleViewmodelKtx = "2.9.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,10 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 
 # Lottie
 airbnb-lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottieVersion" }
+
+# Material icons
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

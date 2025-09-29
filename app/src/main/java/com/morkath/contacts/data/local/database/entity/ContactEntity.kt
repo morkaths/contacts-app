@@ -10,11 +10,10 @@ data class ContactEntity(
     val id: Long,
     val name: String,
     @ColumnInfo(name = "phone_number")
-    val phoneNumber: String,
+    val phoneNumber: String?,
     val email: String?,
     val address: String?,
     val birthday: String?,
-    val notes: String?,
     @ColumnInfo(name = "photo_uri")
     val photoUri: String?,
     @ColumnInfo(name = "updated_at")

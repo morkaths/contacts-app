@@ -1,5 +1,6 @@
-package com.morkath.contacts.ui.contact.detail
+package com.morkath.contacts.ui.contact
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -25,15 +26,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VideoChat
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Whatsapp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -42,37 +51,56 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.morkath.contacts.ui.theme.AvatarColors
 import com.morkath.contacts.ui.theme.ContactsTheme
 import kotlinx.coroutines.launch
-import com.morkath.contacts.domain.model.Contact
+import com.morkath.contacts.util.PhoneUtils
+import com.morkath.contacts.util.SmsUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactDetailScreen(
-    modifier: Modifier = Modifier,
-    contact: Contact,
-    onNavigateBack: () -> Unit
+    contactId: Long?,
+    context: Context,
+    viewModel: ContactViewModel = viewModel(),
+    onBack: () -> Unit = {},
+    onEdit: () -> Unit = {},
 ) {
+    if (contactId == null) {
+        LaunchedEffect(Unit) {
+            onBack()
+        }
+        return
+    }
+    val contact by viewModel.getById(contactId).collectAsState(initial = null)
+
+
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val coroutineScope = rememberCoroutineScope()
+    var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -84,7 +112,7 @@ fun ContactDetailScreen(
                 title = { /* Text("Contact Detail") */ },
                 navigationIcon = {
                     // Back button
-                    IconButton(onClick = { /* Handle back navigation */ }) {
+                    IconButton(onClick = onBack) {
                         Icon(
                             Icons.Default.ArrowBack,
                             contentDescription = "Back"
@@ -94,17 +122,23 @@ fun ContactDetailScreen(
                 actions = {
                     // Favorite button
                     IconButton(
-                        onClick = { /* Handle favorite action */ },
+                        onClick = {
+                            contact?.let {
+                                viewModel.update(it.copy(isFavorite = !(it.isFavorite ?: false)))
+                            }
+                        },
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Icon(
-                            Icons.Default.FavoriteBorder,
+                            imageVector =
+                                if (contact?.isFavorite == true) Icons.Default.Favorite
+                                else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite Contact"
                         )
                     }
                     // Edit button
                     IconButton(
-                        onClick = { /* Handle edit action */ },
+                        onClick = onEdit,
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Icon(
@@ -112,7 +146,6 @@ fun ContactDetailScreen(
                             contentDescription = "Edit Contact"
                         )
                     }
-
                     // Setting button
                     IconButton(
                         onClick = {
@@ -131,77 +164,138 @@ fun ContactDetailScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(innerPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(24.dp))
-            Box(
-                modifier = modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(
-                        color = AvatarColors[contact.id.hashCode() % AvatarColors.size],
-                    ),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(Modifier.height(24.dp))
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(
+                            color = AvatarColors[contactId.hashCode() % AvatarColors.size],
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = contact?.name?.firstOrNull()?.uppercase() ?: "",
+                        fontSize = 64.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
                 Text(
-                    "A",
-                    fontSize = 64.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    text = contact?.name ?: "Unknown",
+                    fontSize = 32.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Medium
                 )
-            }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "A Tuan",
-                fontSize = 32.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(Modifier.height(24.dp))
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) {
-                ActionButton(icon = Icons.Default.Call, label = "Gọi")
-                ActionButton(icon = Icons.Default.Email, label = "Nhắn tin")
-                ActionButton(icon = Icons.Default.Build, label = "Video")
-                ActionButton(icon = Icons.Default.Email, label = "Gửi email", enabled = false)
-            }
-            Spacer(Modifier.height(24.dp))
-            // Contact Info
-            ContactInfoItem(
-                icon = Icons.Default.Call,
-                info = "090 249 98 99",
-                subInfo = "Điện thoại"
-            )
-            Spacer(Modifier.height(16.dp))
-            // Connected Apps
-            SectionTitle(title = "Ứng dụng đã kết nối")
-            ConnectedAppItem(
-                appName = "Zalo",
-                contactMethods = listOf("0902499899", "0123456789", "923913912")
-            )
-            ConnectedAppItem(appName = "Messenger")
-            ConnectedAppItem(appName = "Meet")
-            ConnectedAppItem(appName = "WhatsApp")
-            Spacer(Modifier.height(16.dp))
-            // Settings
-            Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
-                Column {
-                    SectionTitle(title = "Chế độ cài đặt về người liên hệ")
-                    SettingItem(settingName = "Nhạc chuông của người liên hệ")
-                    SettingItem(settingName = "Thêm vào nhóm")
-                    SettingItem(settingName = "Lời nhắc sinh nhật")
-                    SettingItem(settingName = "Chia sẻ liên hệ")
-                    SettingItem(icon = Icons.Default.Delete, color = Color.Red, settingName = "Xóa")
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
+                ) {
+                    ActionButton(
+                        icon = Icons.Default.Call,
+                        label = "Gọi",
+                        onClick = {
+                            PhoneUtils.makePhoneCall(context=context, phoneNumber = contact?.phoneNumber
+                                ?: "")
+                        }
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Message,
+                        label = "Nhắn tin",
+                        onClick = {
+                            SmsUtils.sendSms(context=context, phoneNumber = contact?.phoneNumber ?: "")
+                        }
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Videocam,
+                        label = "Video"
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Email,
+                        label = "Gửi email",
+                        enabled = false
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+                // Contact Info
+                ContactInfoItem(
+                    icon = Icons.Default.Call,
+                    info = contact?.phoneNumber ?: "Chưa có số điện thoại",
+                    subInfo = "Điện thoại"
+                )
+                Spacer(Modifier.height(16.dp))
+                // Connected Apps
+                SectionTitle(title = "Kết nối với ứng dụng")
+                ConnectedAppItem(
+                    icon = Icons.Default.Call,
+                    appName = "Zalo",
+                    contactMethods = listOf("0902499899", "0123456789", "923913912")
+                )
+                ConnectedAppItem(
+                    icon = Icons.Default.VideoChat,
+                    appName = "Meet"
+                )
+                ConnectedAppItem(
+                    icon = Icons.Default.Whatsapp,
+                    appName = "WhatsApp"
+                )
+                Spacer(Modifier.height(16.dp))
+                // Settings
+                Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+                    Column {
+                        SectionTitle(title = "Cài đặt liên hệ")
+                        SettingItem(
+                            icon = Icons.Default.MusicNote,
+                            settingName = "Nhạc chuông của người liên hệ"
+                        )
+                        SettingItem(
+                            icon = Icons.Default.GroupAdd,
+                            settingName = "Thêm vào nhóm"
+                        )
+                        SettingItem(
+                            icon = Icons.Default.Cake,
+                            settingName = "Lời nhắc sinh nhật"
+                        )
+                        SettingItem(
+                            settingName = "Chia sẻ liên hệ"
+                        )
+                        SettingItem(
+                            icon = Icons.Default.Delete,
+                            color = Color.Red,
+                            settingName = "Xóa",
+                            onClick = {
+                                showDeleteConfirmDialog = true
+                            }
+                        )
+                    }
                 }
             }
-        }
+
+    }
+
+    if (showDeleteConfirmDialog) {
+        DeleteConfirmationDialog(
+            contactName = contact?.name ?: "",
+            onConfirm = {
+                viewModel.delete(contactId)
+                showDeleteConfirmDialog = false
+                onBack()
+            },
+            onDismiss = {
+                showDeleteConfirmDialog = false
+            }
+        )
     }
 }
 
@@ -213,9 +307,12 @@ fun ActionButton(
     enabled: Boolean = true,
     onClick: () -> Unit = {}
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
         Box(
-            modifier = modifier
+            modifier = Modifier
                 .height(56.dp)
                 .width(74.dp)
                 .clip(RoundedCornerShape(24.dp)),
@@ -224,7 +321,7 @@ fun ActionButton(
             FilledIconButton(
                 onClick = onClick,
                 enabled = enabled,
-                modifier = modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = if (enabled) MaterialTheme.colorScheme.primary
                     else Color(0xFF3A3B3F).copy(alpha = 0.38f)
@@ -233,7 +330,7 @@ fun ActionButton(
                 Icon(
                     icon,
                     contentDescription = label,
-                    modifier = modifier.size(24.dp),
+                    modifier = Modifier.size(24.dp),
                     tint = if (enabled) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.38f)
                 )
@@ -303,8 +400,7 @@ fun ContactInfoItem(
 
 @Composable
 fun ConnectedAppItem(
-    modifier: Modifier = Modifier,
-    icon: ImageVector = Icons.Default.Edit,
+    icon: ImageVector,
     appName: String,
     contactMethods: List<String> = emptyList()
 ) {
@@ -314,6 +410,7 @@ fun ConnectedAppItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 color = MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.medium
@@ -369,20 +466,22 @@ fun ConnectedAppItem(
 
 @Composable
 fun SettingItem(
-    modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Default.Settings,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    settingName: String
+    settingName: String,
+    onClick: () -> Unit = {}
 ) {
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.medium
+                shape = RoundedCornerShape(10.dp)
             )
-            .padding(16.dp),
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -399,6 +498,41 @@ fun SettingItem(
     }
 }
 
+@Composable
+fun DeleteConfirmationDialog(
+    contactName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Xác nhận xóa")
+        },
+        text = {
+            Text(text = "Bạn có chắc chắn muốn xóa liên hệ \"$contactName\" không? Hành động này không thể hoàn tác.")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm()
+                }
+            ) {
+                Text("Xóa", color = Color.Red)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                }
+            ) {
+                Text("Hủy")
+            }
+        }
+    )
+}
+
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
@@ -408,8 +542,10 @@ fun ContactDetailScreenPreview() {
         dynamicColor = false,
     ) {
         ContactDetailScreen(
-            contact = Contact(1, "Nguyen Van A", "0123456789"),
-            onNavigateBack = {}
+            context = LocalContext.current,
+            contactId = 1,
+            onBack = {},
+            onEdit = {}
         )
     }
 }

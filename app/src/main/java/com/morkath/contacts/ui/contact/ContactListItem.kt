@@ -1,4 +1,4 @@
-package com.morkath.contacts.ui.contact.list
+package com.morkath.contacts.ui.contact
 
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
@@ -14,22 +14,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import com.morkath.contacts.ui.theme.AvatarColors
 import com.morkath.contacts.domain.model.Contact
+import com.morkath.contacts.ui.theme.ContactsTheme
 
 
 @Composable
 fun ContactListItem(
+    modifier: Modifier = Modifier,
     contact: Contact,
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 6.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -79,10 +82,13 @@ fun ContactListItem(
 @Preview(showBackground = true)
 @Composable
 fun ContactListItemPreview() {
-    MaterialTheme {
+    ContactsTheme(
+        darkTheme = false,
+        dynamicColor = false
+    ) {
         ContactListItem(
             contact = Contact(1, "Preview Contact", "0123456789"),
-            onClick = { 1 }
+            onClick = { }
         )
     }
 }

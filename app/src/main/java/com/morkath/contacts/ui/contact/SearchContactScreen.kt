@@ -1,5 +1,8 @@
-package com.morkath.contacts.ui.search
+package com.morkath.contacts.ui.contact
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,23 +59,35 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.morkath.contacts.ui.contact.ContactListItem
 import com.morkath.contacts.ui.theme.ContactsTheme
+import com.morkath.contacts.util.VoiceSearchUtil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(
+fun SearchContactScreen(
+    viewModel: ContactViewModel = viewModel(),
     onBack: () -> Unit = {},
     onDetail: (Long) -> Unit = { },
 ) {
-    val viewModel: SearchViewModel = viewModel()
-    val results by viewModel.results.collectAsState()
+    val results by viewModel.searchResults.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     val recentSearches = remember { mutableStateListOf<String>() }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    // Voice search launcher
+    val voiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = VoiceSearchUtil.extractResult(result.data)
+            if (!spokenText.isNullOrBlank()) {
+                searchQuery = spokenText
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -143,7 +158,10 @@ fun SearchScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* TODO: Xử lý sự kiện voice search */ }) {
+                        IconButton(onClick = {
+                            val intent = VoiceSearchUtil.createVoiceSearchIntent("Nói để tìm kiếm")
+                            voiceLauncher.launch(intent)
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Mic,
                                 contentDescription = "Tìm kiếm bằng giọng nói"
@@ -270,7 +288,7 @@ fun SearchScreenPreview() {
         darkTheme = false,
         dynamicColor = false,
     ) {
-        SearchScreen(
+        SearchContactScreen(
             onBack = {},
             onDetail = {}
         )
