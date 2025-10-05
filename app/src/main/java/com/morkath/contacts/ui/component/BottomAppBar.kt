@@ -2,9 +2,9 @@ package com.morkath.contacts.ui.component
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -45,7 +45,7 @@ fun CustomBottomBar(
             NavigationBarItem(
                 selected = selectedIndex == 2,
                 onClick = { selectedIndex = 2 },
-                icon = { Icon(Icons.Filled.Bookmark, contentDescription = null) },
+                icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
                 label = { Text("Sắp xếp") },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = MaterialTheme.colorScheme.primary

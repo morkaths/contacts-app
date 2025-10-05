@@ -28,7 +28,6 @@ import com.morkath.contacts.domain.model.Contact
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,7 +53,7 @@ fun EditContactScreen(
                 phoneNumber = "",
                 email = null,
                 address = null,
-                pictureUri = null,
+                photoUri = null,
                 isFavorite = false
             )
         )

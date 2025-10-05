@@ -46,7 +46,7 @@ fun AddContactScreen(
                 phoneNumber = "",
                 email = null,
                 address = null,
-                pictureUri = null,
+                photoUri = null,
                 isFavorite = false
             )
         )

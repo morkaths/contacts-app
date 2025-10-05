@@ -16,7 +16,7 @@ val sampleContacts = mutableStateListOf(
         phoneNumber = "0768457358",
         email = "a@example.com",
         address = "123 Main St",
-        pictureUri = null,
+        photoUri = null,
         isFavorite = false
     ),
     Contact(
@@ -25,7 +25,7 @@ val sampleContacts = mutableStateListOf(
         phoneNumber = "0987654321",
         email = "b@example.com",
         address = "456 Second St",
-        pictureUri = null,
+        photoUri = null,
         isFavorite = true
     ),
     Contact(
@@ -34,7 +34,7 @@ val sampleContacts = mutableStateListOf(
         phoneNumber = "0121987654",
         email = null,
         address = null,
-        pictureUri = null,
+        photoUri = null,
         isFavorite = false
     )
 )

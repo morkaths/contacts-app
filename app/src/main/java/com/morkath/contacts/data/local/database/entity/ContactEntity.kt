@@ -16,6 +16,7 @@ data class ContactEntity(
     val birthday: String?,
     @ColumnInfo(name = "photo_uri")
     val photoUri: String?,
+    val isFavorite: Boolean?,
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long
 )
