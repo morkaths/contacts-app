@@ -25,23 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.GroupAdd
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Message
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoChat
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Whatsapp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -50,6 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -68,14 +54,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.morkath.contacts.ui.component.CustomSnackbar
+import com.morkath.contacts.ui.component.CustomSnackbarType
 import com.morkath.contacts.ui.theme.AvatarColors
 import com.morkath.contacts.ui.theme.ContactsTheme
+import com.morkath.contacts.util.IntentUtils
 import kotlinx.coroutines.launch
 import com.morkath.contacts.util.PhoneUtils
 import com.morkath.contacts.util.SmsUtils
@@ -89,21 +80,43 @@ fun ContactDetailScreen(
     onBack: () -> Unit = {},
     onEdit: () -> Unit = {},
 ) {
-    if (contactId == null) {
-        LaunchedEffect(Unit) {
+    LaunchedEffect(contactId) {
+        if (contactId != null) {
+            viewModel.loadContactById(contactId)
+        } else {
             onBack()
         }
-        return
     }
-    val contact by viewModel.getById(contactId).collectAsState(initial = null)
-
+    val contact by viewModel.contact.collectAsState()
 
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val coroutineScope = rememberCoroutineScope()
     var showDeleteConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                CustomSnackbar(
+                    message = data.visuals.message,
+                    type = CustomSnackbarType.INFO
+                )
+            }
+        },
         topBar = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                CustomSnackbar(
+                    message = data.visuals.message,
+                    type = CustomSnackbarType.INFO
+                )
+            }
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -172,6 +185,7 @@ fun ContactDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(24.dp))
+                // Avatar
                 Box(
                     modifier = Modifier
                         .size(120.dp)
@@ -181,12 +195,21 @@ fun ContactDetailScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = contact?.name?.firstOrNull()?.uppercase() ?: "",
-                        fontSize = 64.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (contact?.photoUri != null) {
+                        AsyncImage(
+                            model = contact?.photoUri,
+                            contentDescription = "Contact Photo",
+                            modifier = Modifier.fillMaxSize(), // Lấp đầy Box tròn
+                            contentScale = ContentScale.Crop // Crop ảnh cho vừa
+                        )
+                    } else {
+                        Text(
+                            text = contact?.name?.firstOrNull()?.uppercase() ?: "",
+                            fontSize = 64.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
@@ -206,8 +229,7 @@ fun ContactDetailScreen(
                         icon = Icons.Default.Call,
                         label = "Gọi",
                         onClick = {
-                            PhoneUtils.makePhoneCall(context=context, phoneNumber = contact?.phoneNumber
-                                ?: "")
+                            PhoneUtils.makePhoneCall(context=context, phoneNumber = contact?.phoneNumber ?: "")
                         }
                     )
                     ActionButton(
@@ -219,12 +241,18 @@ fun ContactDetailScreen(
                     )
                     ActionButton(
                         icon = Icons.Default.Videocam,
-                        label = "Video"
+                        label = "Video",
+                        onClick = {
+                            IntentUtils.openZalo(context, contact?.phoneNumber ?: "")
+                        }
                     )
                     ActionButton(
                         icon = Icons.Default.Email,
                         label = "Gửi email",
-                        enabled = false
+                        onClick = {
+                            IntentUtils.sendEmail(context = context, email = contact?.email ?: "")
+                        },
+                        enabled = !contact?.email.isNullOrBlank()
                     )
                 }
                 Spacer(Modifier.height(24.dp))
@@ -288,7 +316,7 @@ fun ContactDetailScreen(
         DeleteConfirmationDialog(
             contactName = contact?.name ?: "",
             onConfirm = {
-                viewModel.delete(contactId)
+                viewModel.delete(contactId!!)
                 showDeleteConfirmDialog = false
                 onBack()
             },

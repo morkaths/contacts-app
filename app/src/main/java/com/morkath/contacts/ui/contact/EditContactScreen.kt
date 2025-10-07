@@ -1,5 +1,9 @@
 package com.morkath.contacts.ui.contact
 
+import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,45 +32,57 @@ import com.morkath.contacts.domain.model.Contact
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditContactScreen(
+    context: Context,
     contactId: Long?,
     viewModel: ContactViewModel = viewModel(),
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
-    if (contactId == null) {
-        LaunchedEffect(Unit) {
+    LaunchedEffect(contactId) {
+        if (contactId != null) {
+            viewModel.loadContactById(contactId)
+        } else {
             onBack()
         }
-        return
     }
-    val contactEdit by viewModel.getById(contactId).collectAsState(initial = null)
-    var contact by remember {
-        mutableStateOf(
-            Contact(
-                id = 0,
-                name = "",
-                phoneNumber = "",
-                email = null,
-                address = null,
-                photoUri = null,
-                isFavorite = false
-            )
-        )
-    }
+    val initialContact by viewModel.contact.collectAsState()
+    var contact by remember { mutableStateOf<Contact?>(null) }
+    val formUiState by viewModel.formUiState.collectAsState()
 
-    val uiState = viewModel.validate(contact)
     val keyboardController = LocalSoftwareKeyboardController.current
-    val isDirty = contact != contactEdit
+    val isDirty = contact != initialContact
     var showDialog by remember { mutableStateOf(false) }
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            try {
+                val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(it, flag)
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
+            contact = contact?.copy(photoUri = it.toString())
+        }
+    }
 
-    LaunchedEffect(contactEdit) {
-        contactEdit?.let {
-            contact = it
+    LaunchedEffect(initialContact) {
+        if (contact == null && initialContact != null) {
+            contact = initialContact
+        }
+    }
+
+    LaunchedEffect(contact) {
+        contact?.let {
+            viewModel.validate(it)
         }
     }
 
@@ -84,7 +100,7 @@ fun EditContactScreen(
                 actions = {
                     // Save button
                     Button(onClick = {
-                        viewModel.update(contact.copy(id = contactId))
+                        contact?.let { viewModel.update(it) }
                         onSave()
                     }) { Text("Lưu") }
                     // More options button
@@ -100,125 +116,151 @@ fun EditContactScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(Modifier.height(24.dp))
-            Box(
+        contact?.let { currentContact ->
+            Column(
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .clickable { /* TODO: Pick image */ },
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Add Photo",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
+                Spacer(Modifier.height(24.dp))
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { imagePicker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (currentContact.photoUri != null) {
+                        AsyncImage(
+                            model = currentContact.photoUri,
+                            contentDescription = "Contact Photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Add Photo",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                }
+                Text(
+                    "Thêm ảnh",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(vertical = 12.dp)
                 )
-            }
-            Text(
-                "Thêm ảnh",
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
 
-            Spacer(Modifier.height(24.dp))
-            OutlinedTextField(
-                value = contact.name,
-                onValueChange = { contact = contact.copy(name = it) },
-                label = { Text("Tên") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Name Icon"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(fontSize = 16.sp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    cursorColor = MaterialTheme.colorScheme.onBackground
-                ),
-                isError = uiState.nameError != null,
-                supportingText = { uiState.nameError?.let { Text(it, color = Color.Red) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = contact.phoneNumber,
-                onValueChange = { contact = contact.copy(phoneNumber = it) },
-                label = { Text("Số điện thoại") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.PhoneIphone,
-                        contentDescription = "Phone Icon"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(fontSize = 16.sp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    cursorColor = MaterialTheme.colorScheme.onBackground
-                ),
-                isError = uiState.phoneError != null,
-                supportingText = { uiState.phoneError?.let { Text(it, color = Color.Red) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = contact.email ?: "",
-                onValueChange = { contact = contact.copy(email = it) },
-                label = { Text("Email") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = "Email Icon"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(fontSize = 16.sp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    cursorColor = MaterialTheme.colorScheme.onBackground
-                ),
-                isError = uiState.emailError != null,
-                supportingText = { uiState.emailError?.let { Text(it, color = Color.Red) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = contact.address ?: "",
-                onValueChange = { contact = contact.copy(address = it) },
-                label = { Text("Địa chỉ") },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(fontSize = 16.sp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
-                    cursorColor = MaterialTheme.colorScheme.onBackground
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
-            )
-            Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = currentContact.name,
+                    onValueChange = { contact = currentContact.copy(name = it) },
+                    label = { Text("Tên") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Name Icon"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        cursorColor = MaterialTheme.colorScheme.onBackground
+                    ),
+                    isError = formUiState.nameError != null,
+                    supportingText = { formUiState.nameError?.let { Text(it, color = Color.Red) } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = currentContact.phoneNumber,
+                    onValueChange = { contact = currentContact.copy(phoneNumber = it) },
+                    label = { Text("Số điện thoại") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.PhoneIphone,
+                            contentDescription = "Phone Icon"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        cursorColor = MaterialTheme.colorScheme.onBackground
+                    ),
+                    isError = formUiState.phoneError != null,
+                    supportingText = {
+                        formUiState.phoneError?.let {
+                            Text(
+                                it,
+                                color = Color.Red
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = currentContact.email ?: "",
+                    onValueChange = { contact = currentContact.copy(email = it) },
+                    label = { Text("Email") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = "Email Icon"
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        cursorColor = MaterialTheme.colorScheme.onBackground
+                    ),
+                    isError = formUiState.emailError != null,
+                    supportingText = {
+                        formUiState.emailError?.let {
+                            Text(
+                                it,
+                                color = Color.Red
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = currentContact.address ?: "",
+                    onValueChange = { contact = currentContact.copy(address = it) },
+                    label = { Text("Địa chỉ") },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontSize = 16.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                        cursorColor = MaterialTheme.colorScheme.onBackground
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
+                )
+                Spacer(Modifier.height(12.dp))
+            }
         }
     }
 
@@ -249,7 +291,10 @@ fun PreviewEditContactScreen() {
         darkTheme = true,
         dynamicColor = false,
     ) {
-        AddContactScreen(
+        val context = LocalContext.current
+        EditContactScreen(
+            context = context,
+            contactId = 1L,
             onSave = {},
             onBack = {}
         )

@@ -1,109 +1,184 @@
 package com.morkath.contacts.ui.contact
 
-import androidx.compose.runtime.mutableStateListOf
+import android.app.Application
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.morkath.contacts.domain.model.Contact
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
+import com.morkath.contacts.domain.usecase.contact.*
+import com.morkath.contacts.util.ImageUtils
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-val sampleContacts = mutableStateListOf(
-    Contact(
-        id = 1,
-        name = "Nguyen Van A",
-        phoneNumber = "0768457358",
-        email = "a@example.com",
-        address = "123 Main St",
-        photoUri = null,
-        isFavorite = false
-    ),
-    Contact(
-        id = 2,
-        name = "Le Thi B",
-        phoneNumber = "0987654321",
-        email = "b@example.com",
-        address = "456 Second St",
-        photoUri = null,
-        isFavorite = true
-    ),
-    Contact(
-        id = 3,
-        name = "Tran Van C",
-        phoneNumber = "0121987654",
-        email = null,
-        address = null,
-        photoUri = null,
-        isFavorite = false
-    )
-)
+sealed class ContactUiState {
+    object Loading : ContactUiState()
+    data class Success(val contacts: List<Contact>) : ContactUiState()
+    data class Error(val message: String) : ContactUiState()
+}
 
-data class ContactUiState(
+data class ContactFormUiState(
     val nameError: String? = null,
     val phoneError: String? = null,
     val emailError: String? = null,
     val isValid: Boolean = true
 )
 
-class ContactViewModel : ViewModel() {
-    private val _contacts = MutableStateFlow<List<Contact>>(sampleContacts)
-    val contacts: StateFlow<List<Contact>> = _contacts.asStateFlow()
-    private val _searchResults = MutableStateFlow<List<Contact>>(emptyList())
-    val searchResults: StateFlow<List<Contact>> = _searchResults.asStateFlow()
+@HiltViewModel
+class ContactViewModel @Inject constructor(
+    private val app: Application,
+    private val getContactsUseCase: GetContactsUseCase,
+    private val getContactByIdUseCase: GetContactByIdUseCase,
+    private val searchContactsUseCase: SearchContactsUseCase,
+    private val insertContactUseCase: InsertContactUseCase,
+    private val updateContactUseCase: UpdateContactUseCase,
+    private val deleteContactUseCase: DeleteContactUseCase,
+    private val validatorNameUseCase: ValidatorNameUseCase,
+    private val validatorPhoneUseCase: ValidatorPhoneUseCase,
+    private val validatorEmailUseCase: ValidatorEmailUseCase
+) : ViewModel() {
+    private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
+    private val _contact = MutableStateFlow<Contact?>(null)
+    private val _uiState = MutableStateFlow<ContactUiState>(ContactUiState.Loading)
+    private val _formUiState = MutableStateFlow(ContactFormUiState())
+    private val _uiEvent = Channel<String>()
 
-    fun getById(id: Long): Flow<Contact?> {
-        return contacts.map { list -> list.find { it.id == id } }
+    val contacts: StateFlow<List<Contact>> = _contacts.asStateFlow()
+    val contact: StateFlow<Contact?> = _contact.asStateFlow()
+    val uiState: StateFlow<ContactUiState> = _uiState.asStateFlow()
+    val formUiState: StateFlow<ContactFormUiState> = _formUiState.asStateFlow()
+    val uiEvent: Flow<String> = _uiEvent.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            loadContacts()
+        }
+    }
+
+    private fun loadContacts() {
+        viewModelScope.launch {
+            _uiState.value = ContactUiState.Loading
+            try {
+                getContactsUseCase().collect { contactList ->
+                    _contacts.value = contactList
+                    _uiState.value = ContactUiState.Success(contactList)
+                }
+            } catch (e: Exception) {
+                _uiState.value = ContactUiState.Error("Error loading contacts: ${e.message}")
+                _uiEvent.send("Error loading contacts: ${e.message}")
+            }
+        }
+    }
+
+    fun loadContactById(contactId: Long) {
+        viewModelScope.launch {
+            getContactByIdUseCase(contactId).collect { contact ->
+                _contact.value = contact
+            }
+        }
     }
 
     fun create(contact: Contact) {
-        val newId = (_contacts.value.maxOfOrNull { it.id } ?: 0) + 1
-        _contacts.value = _contacts.value + contact.copy(id = newId)
+        viewModelScope.launch {
+            validate(contact)
+            if (!_formUiState.value.isValid) {
+                _uiEvent.send("Vui lòng sửa các lỗi trong form.")
+                return@launch
+            }
+
+            try {
+                var contactToSave = contact
+                if (!contact.photoUri.isNullOrBlank() && contact.photoUri.startsWith("content://")) {
+                    val copiedPath = ImageUtils.copyImageToInternalStorage(app, contact.photoUri.toUri())
+                    if (copiedPath != null) {
+                        contactToSave = contact.copy(photoUri = copiedPath)
+                    } else {
+                        _uiEvent.send("Failed to copy image to internal storage.")
+                        contactToSave = contact.copy(photoUri = null)
+                    }
+                }
+                insertContactUseCase(contactToSave)
+                _uiEvent.send("Contact created successfully!")
+            } catch (e: Exception) {
+                _uiEvent.send("Error creating contact: ${e.message}")
+            }
+        }
     }
 
     fun update(contact: Contact) {
-        _contacts.value = _contacts.value.map { if (it.id == contact.id) contact else it }
+        viewModelScope.launch {
+            validate(contact)
+            if (!_formUiState.value.isValid) {
+                _uiEvent.send("Vui lòng sửa các lỗi trong form.")
+                return@launch
+            }
+
+            try {
+                var contactToSave = contact
+                val oldContact = getContactByIdUseCase(contact.id).first()
+                val oldPhotoUri = oldContact?.photoUri
+
+                if (!contact.photoUri.isNullOrBlank() && contact.photoUri.startsWith("content://")) {
+                    val copiedPath = ImageUtils.copyImageToInternalStorage(app, contact.photoUri.toUri())
+                    if (copiedPath != null) {
+                        contactToSave = contact.copy(photoUri = copiedPath)
+                        ImageUtils.deleteImageFromInternalStorage(oldPhotoUri)
+                    } else {
+                        _uiEvent.send("Failed to copy image to internal storage.")
+                        contactToSave = contact.copy(photoUri = null)
+                    }
+                }
+                updateContactUseCase(contactToSave)
+                _uiEvent.send("Contact updated successfully!")
+            } catch (e: Exception) {
+                _uiEvent.send("Error updating contact: ${e.message}")
+            }
+        }
     }
 
     fun delete(contactId: Long) {
-        _contacts.value = _contacts.value.filter { it.id != contactId }
+        viewModelScope.launch {
+            try {
+                val contactToDelete = getContactByIdUseCase(contactId).first()
+                ImageUtils.deleteImageFromInternalStorage(contactToDelete?.photoUri)
+                deleteContactUseCase(contactId)
+                _uiEvent.send("Contact deleted successfully!")
+            } catch (e: Exception) {
+                _uiEvent.send("Error deleting contact: ${e.message}")
+            }
+        }
     }
 
     fun search(query: String) {
-        _searchResults.value = _contacts.value.filter {
-            it.name.contains(query, ignoreCase = true) ||
-            it.phoneNumber.contains(query) ||
-            it.email?.contains(query, ignoreCase = true) == true
+        viewModelScope.launch {
+            _uiState.value = ContactUiState.Loading
+            try {
+                searchContactsUseCase(query).collect { result ->
+                    _contacts.value = result
+                    _uiState.value = ContactUiState.Success(result)
+                }
+            } catch (e: Exception) {
+                _uiState.value = ContactUiState.Error("Error searching contacts: ${e.message}")
+            }
         }
     }
 
-    fun validate(contact: Contact): ContactUiState {
-        val nameRegex = Regex("^[a-zA-Z\\s]+$")
-        val phoneRegex = Regex("^(09|03|07|08|05)\\d{8}$")
-        val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
-
-        val nameError = when {
-            contact.name.isBlank() -> "Tên không được để trống"
-            !nameRegex.matches(contact.name) -> "Tên chỉ được chứa chữ cái và khoảng trắng"
-            else -> null
-        }
-
-        val phoneError = when {
-            contact.phoneNumber.isBlank() -> "Số điện thoại không được để trống"
-            !phoneRegex.matches(contact.phoneNumber) -> "Số điện thoại chỉ được chứa chữ số"
-            else -> null
-        }
-
-        val emailError = if (!contact.email.isNullOrBlank() && !emailRegex.matches(contact.email)) {
-            "Email không hợp lệ"
+    fun validate(contact: Contact) {
+        val nameResult = validatorNameUseCase(contact.name)
+        val phoneResult = validatorPhoneUseCase(contact.phoneNumber)
+        val emailResult = if (!contact.email.isNullOrBlank()) {
+            validatorEmailUseCase(contact.email)
         } else null
 
-        val isValid = nameError == null && phoneError == null && emailError == null
+        val isValid = nameResult.isValid && phoneResult.isValid && (emailResult?.isValid ?: true)
 
-        return ContactUiState(
-            nameError = nameError,
-            phoneError = phoneError,
-            emailError = emailError,
+
+        _formUiState.value = ContactFormUiState(
+            nameError = nameResult.errorMessage,
+            phoneError = phoneResult.errorMessage,
+            emailError = emailResult?.errorMessage,
             isValid = isValid
         )
     }

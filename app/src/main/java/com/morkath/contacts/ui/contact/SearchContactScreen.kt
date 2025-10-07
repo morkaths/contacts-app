@@ -19,7 +19,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -44,6 +43,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
@@ -69,13 +70,15 @@ fun SearchContactScreen(
     onBack: () -> Unit = {},
     onDetail: (Long) -> Unit = { },
 ) {
-    val results by viewModel.searchResults.collectAsState()
+    val contacts by viewModel.contacts.collectAsState()
 
+    // ui state
     var searchQuery by remember { mutableStateOf("") }
     val recentSearches = remember { mutableStateListOf<String>() }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Voice search launcher
     val voiceLauncher = rememberLauncherForActivityResult(
@@ -90,6 +93,12 @@ fun SearchContactScreen(
     }
 
     LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
         focusRequester.requestFocus()
         keyboardController?.show()
     }
@@ -99,6 +108,7 @@ fun SearchContactScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             Column {
                 TopAppBar(
@@ -139,7 +149,7 @@ fun SearchContactScreen(
                                     IconButton(onClick = { searchQuery = "" }) {
                                         Icon(
                                             imageVector = Icons.Filled.Close,
-                                            contentDescription = "Xóa tìm kiếm"
+                                            contentDescription = "Clear search"
                                         )
                                     }
                                 }
@@ -159,7 +169,7 @@ fun SearchContactScreen(
                     },
                     actions = {
                         IconButton(onClick = {
-                            val intent = VoiceSearchUtil.createVoiceSearchIntent("Nói để tìm kiếm")
+                            val intent = VoiceSearchUtil.createVoiceSearchIntent("Say something...")
                             voiceLauncher.launch(intent)
                         }) {
                             Icon(
@@ -233,7 +243,7 @@ fun SearchContactScreen(
 
             // TODO: Hiển thị kết quả tìm kiếm
             if (searchQuery.isNotEmpty()) {
-                if (results.isEmpty()) {
+                if (contacts.isEmpty()) {
                     item {
                         Column(
                             modifier = Modifier
@@ -266,7 +276,7 @@ fun SearchContactScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    items(results) { contact ->
+                    items(contacts) { contact ->
                         ContactListItem(
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
                             contact = contact,

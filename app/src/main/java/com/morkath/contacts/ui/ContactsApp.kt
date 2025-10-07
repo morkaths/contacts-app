@@ -71,6 +71,7 @@ fun NavGraph(
         }
         composable("create_contact") {
             AddContactScreen(
+                context = context,
                 viewModel = contactViewModel,
                 onSave = { navController.popBackStack() },
                 onBack = { navController.popBackStack() }
@@ -79,6 +80,7 @@ fun NavGraph(
         composable("edit_contact/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toLongOrNull()
             EditContactScreen(
+                context = context,
                 contactId = id,
                 viewModel = contactViewModel,
                 onSave = { navController.popBackStack() },

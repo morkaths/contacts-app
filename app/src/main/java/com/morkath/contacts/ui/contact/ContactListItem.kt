@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.morkath.contacts.ui.theme.AvatarColors
 import com.morkath.contacts.domain.model.Contact
 import com.morkath.contacts.ui.theme.ContactsTheme
@@ -48,18 +50,27 @@ fun ContactListItem(
             Box(
                 modifier = Modifier
                     .size(44.dp)
+                    .clip(CircleShape)
                     .background(
-                        color = AvatarColors[contact.id.hashCode() % AvatarColors.size],
-                        shape = CircleShape
+                        color = AvatarColors[contact.id.hashCode() % AvatarColors.size]
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Contact Avatar",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                if (contact.photoUri != null) {
+                    AsyncImage(
+                        model = contact.photoUri,
+                        contentDescription = "Contact Photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Contact Avatar",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(24.dp))
             // Contact details

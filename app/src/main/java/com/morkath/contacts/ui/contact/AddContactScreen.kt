@@ -1,5 +1,9 @@
 package com.morkath.contacts.ui.contact
 
+import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,15 +29,19 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneIphone
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.domain.model.Contact
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContactScreen(
+    context: Context,
     viewModel: ContactViewModel = viewModel(),
     onSave: () -> Unit,
     onBack: () -> Unit
@@ -51,12 +59,25 @@ fun AddContactScreen(
             )
         )
     }
-    val uiState = viewModel.validate(contact)
+    val formUiState by viewModel.formUiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val isDirty = contact.name.isNotBlank() || contact.phoneNumber.isNotBlank() ||
             !contact.email.isNullOrBlank() || !contact.address.isNullOrBlank()
     var showDialog by remember { mutableStateOf(false) }
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(it, flag)
+            contact = contact.copy(photoUri = it.toString())
+        }
+    }
+
+    LaunchedEffect(contact) {
+        viewModel.validate(contact)
+    }
 
     Scaffold(
         topBar = {
@@ -103,15 +124,24 @@ fun AddContactScreen(
                     .size(120.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
-                    .clickable { /* TODO: Pick image */ },
+                    .clickable { imagePicker.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Add Photo",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
+                if(contact.photoUri != null) {
+                    AsyncImage(
+                        model = contact.photoUri,
+                        contentDescription = "Contact Photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Add Photo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
             Text(
                 "Thêm ảnh",
@@ -138,8 +168,8 @@ fun AddContactScreen(
                     focusedBorderColor = MaterialTheme.colorScheme.onBackground,
                     cursorColor = MaterialTheme.colorScheme.onBackground
                 ),
-                isError = uiState.nameError != null,
-                supportingText = { uiState.nameError?.let { Text(it, color = Color.Red) } },
+                isError = formUiState.nameError != null,
+                supportingText = { formUiState.nameError?.let { Text(it, color = Color.Red) } },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
@@ -165,8 +195,8 @@ fun AddContactScreen(
                     focusedBorderColor = MaterialTheme.colorScheme.onBackground,
                     cursorColor = MaterialTheme.colorScheme.onBackground
                 ),
-                isError = uiState.phoneError != null,
-                supportingText = { uiState.phoneError?.let { Text(it, color = Color.Red) } },
+                isError = formUiState.phoneError != null,
+                supportingText = { formUiState.phoneError?.let { Text(it, color = Color.Red) } },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
@@ -189,8 +219,8 @@ fun AddContactScreen(
                     focusedBorderColor = MaterialTheme.colorScheme.onBackground,
                     cursorColor = MaterialTheme.colorScheme.onBackground
                 ),
-                isError = uiState.emailError != null,
-                supportingText = { uiState.emailError?.let { Text(it, color = Color.Red) } },
+                isError = formUiState.emailError != null,
+                supportingText = { formUiState.emailError?.let { Text(it, color = Color.Red) } },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
@@ -257,7 +287,9 @@ fun PreviewCreateContactScreen() {
         darkTheme = true,
         dynamicColor = false,
     ) {
+        val context = LocalContext.current
         AddContactScreen(
+            context = context,
             onSave = {},
             onBack = {}
         )
