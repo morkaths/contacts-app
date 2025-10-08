@@ -35,17 +35,19 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditContactScreen(
-    context: Context,
     contactId: Long?,
-    viewModel: ContactViewModel = viewModel(),
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val viewModel: ContactViewModel = hiltViewModel()
+
     LaunchedEffect(contactId) {
         if (contactId != null) {
             viewModel.loadContactById(contactId)
@@ -291,9 +293,7 @@ fun PreviewEditContactScreen() {
         darkTheme = true,
         dynamicColor = false,
     ) {
-        val context = LocalContext.current
         EditContactScreen(
-            context = context,
             contactId = 1L,
             onSave = {},
             onBack = {}

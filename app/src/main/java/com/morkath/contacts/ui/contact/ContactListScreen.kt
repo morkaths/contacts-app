@@ -1,5 +1,9 @@
 package com.morkath.contacts.ui.contact
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,27 +13,59 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.ContextCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.ui.component.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactListScreen(
-    viewModel: ContactViewModel = viewModel(),
     onSearch: () -> Unit = { },
     onDetail: (Long) -> Unit = { },
     onCreate: () -> Unit = { }
 ) {
+    val context = LocalContext.current
+    val viewModel: ContactViewModel = hiltViewModel()
     val contacts by viewModel.contacts.collectAsState()
-    val favouriteContacts = contacts.filter { it.isFavorite == true }
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val favouriteContacts = contacts.filter { it.isFavorite == true }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { message ->
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted: Boolean ->
+            if (isGranted) {
+                viewModel.importDeviceContacts()
+            } else {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Bạn đã từ chối cấp quyền đọc danh bạ.")
+                }
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        // 1. Kiểm tra xem đã có quyền chưa
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        // 2. Nếu chưa có quyền, thì mới hiện hộp thoại xin quyền
+        if (!hasPermission) {
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
         }
     }
 

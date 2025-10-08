@@ -8,6 +8,7 @@ import com.morkath.contacts.data.mapper.toEntity
 import com.morkath.contacts.data.local.database.dao.ContactDao
 import com.morkath.contacts.domain.model.Contact
 import com.morkath.contacts.domain.repository.ContactRepository
+import com.morkath.contacts.domain.repository.DeviceContactDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ContactRepositoryImpl @Inject constructor(
-    private val contactDao: ContactDao
+    private val contactDao: ContactDao,
 ) : ContactRepository {
 
     override suspend fun getContacts(): Flow<List<Contact>> {

@@ -69,6 +69,9 @@ dependencies {
     kapt(libs.dagger.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Timber
+    implementation(libs.timber)
+
     // Navigation
     implementation(libs.androidx.navigation.compose)
 

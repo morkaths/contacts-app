@@ -22,9 +22,7 @@ internal object DatabaseModule {
             context,
             AppDatabase::class.java,
             "app.db"
-    )
-        .fallbackToDestructiveMigration()
-        .build()
+    ).build()
 
     @Provides
     fun providesContactDao(

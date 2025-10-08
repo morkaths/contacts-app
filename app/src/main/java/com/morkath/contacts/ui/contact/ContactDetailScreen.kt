@@ -1,6 +1,5 @@
 package com.morkath.contacts.ui.contact
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -60,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.morkath.contacts.ui.component.CustomSnackbar
@@ -75,11 +75,12 @@ import com.morkath.contacts.util.SmsUtils
 @Composable
 fun ContactDetailScreen(
     contactId: Long?,
-    context: Context,
-    viewModel: ContactViewModel = viewModel(),
     onBack: () -> Unit = {},
     onEdit: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val viewModel: ContactViewModel = hiltViewModel()
+
     LaunchedEffect(contactId) {
         if (contactId != null) {
             viewModel.loadContactById(contactId)
@@ -570,7 +571,6 @@ fun ContactDetailScreenPreview() {
         dynamicColor = false,
     ) {
         ContactDetailScreen(
-            context = LocalContext.current,
             contactId = 1,
             onBack = {},
             onEdit = {}

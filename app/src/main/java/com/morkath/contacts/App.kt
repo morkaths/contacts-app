@@ -8,6 +8,6 @@ import dagger.hilt.android.HiltAndroidApp
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        Log.d("App", "onCreate")
+        Log.d("App", "Application is created.")
     }
 }

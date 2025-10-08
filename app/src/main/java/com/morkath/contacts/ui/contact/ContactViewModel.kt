@@ -29,6 +29,7 @@ data class ContactFormUiState(
 @HiltViewModel
 class ContactViewModel @Inject constructor(
     private val app: Application,
+    private val getDeviceContactsUseCase: GetDeviceContactsUseCase,
     private val getContactsUseCase: GetContactsUseCase,
     private val getContactByIdUseCase: GetContactByIdUseCase,
     private val searchContactsUseCase: SearchContactsUseCase,
@@ -68,6 +69,21 @@ class ContactViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = ContactUiState.Error("Error loading contacts: ${e.message}")
                 _uiEvent.send("Error loading contacts: ${e.message}")
+            }
+        }
+    }
+
+    fun importDeviceContacts() {
+        viewModelScope.launch {
+            try {
+                val deviceContacts = getDeviceContactsUseCase()
+                deviceContacts.forEach { contact ->
+                    insertContactUseCase(contact)
+                }
+                loadContacts()
+                _uiEvent.send("Imported ${deviceContacts.size} contacts from device.")
+            } catch (e: Exception) {
+                _uiEvent.send("Error importing device contacts: ${e.message}")
             }
         }
     }

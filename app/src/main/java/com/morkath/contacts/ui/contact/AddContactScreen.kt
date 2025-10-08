@@ -1,6 +1,5 @@
 package com.morkath.contacts.ui.contact
 
-import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,7 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.domain.model.Contact
@@ -41,11 +40,11 @@ import com.morkath.contacts.domain.model.Contact
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddContactScreen(
-    context: Context,
-    viewModel: ContactViewModel = viewModel(),
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val viewModel: ContactViewModel = hiltViewModel()
     var contact by remember {
         mutableStateOf(
             Contact(
@@ -287,9 +286,7 @@ fun PreviewCreateContactScreen() {
         darkTheme = true,
         dynamicColor = false,
     ) {
-        val context = LocalContext.current
         AddContactScreen(
-            context = context,
             onSave = {},
             onBack = {}
         )

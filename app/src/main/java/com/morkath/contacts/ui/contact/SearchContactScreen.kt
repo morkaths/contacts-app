@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.util.VoiceSearchUtil
@@ -66,10 +67,10 @@ import com.morkath.contacts.util.VoiceSearchUtil
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchContactScreen(
-    viewModel: ContactViewModel = viewModel(),
     onBack: () -> Unit = {},
     onDetail: (Long) -> Unit = { },
 ) {
+    val viewModel: ContactViewModel = hiltViewModel()
     val contacts by viewModel.contacts.collectAsState()
 
     // ui state
