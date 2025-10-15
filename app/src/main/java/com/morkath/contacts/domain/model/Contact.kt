@@ -2,6 +2,7 @@ package com.morkath.contacts.domain.model
 
 data class Contact(
     val id: Long,
+    val deviceId: Long?,
     val name: String,
     val phoneNumber: String,
     val email: String? = null,

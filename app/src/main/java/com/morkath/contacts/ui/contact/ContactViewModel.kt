@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.morkath.contacts.domain.model.Contact
 import com.morkath.contacts.domain.usecase.contact.*
+import com.morkath.contacts.domain.usecase.device.*
 import com.morkath.contacts.util.ImageUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -29,7 +30,6 @@ data class ContactFormUiState(
 @HiltViewModel
 class ContactViewModel @Inject constructor(
     private val app: Application,
-    private val getDeviceContactsUseCase: GetDeviceContactsUseCase,
     private val getContactsUseCase: GetContactsUseCase,
     private val getContactByIdUseCase: GetContactByIdUseCase,
     private val searchContactsUseCase: SearchContactsUseCase,
@@ -38,7 +38,9 @@ class ContactViewModel @Inject constructor(
     private val deleteContactUseCase: DeleteContactUseCase,
     private val validatorNameUseCase: ValidatorNameUseCase,
     private val validatorPhoneUseCase: ValidatorPhoneUseCase,
-    private val validatorEmailUseCase: ValidatorEmailUseCase
+    private val validatorEmailUseCase: ValidatorEmailUseCase,
+    private val getDeviceContactsUseCase: GetDeviceContactsUseCase,
+    private val addContactToDeviceUseCase: AddContactToDeviceUseCase
 ) : ViewModel() {
     private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
     private val _contact = MutableStateFlow<Contact?>(null)
@@ -88,6 +90,18 @@ class ContactViewModel @Inject constructor(
         }
     }
 
+//    fun syncDeviceContacts(syncUseCase: suspend () -> Pair<Int, Int>) {
+//        viewModelScope.launch {
+//            try {
+//                val (added, updated) = syncUseCase()
+//                _uiEvent.send("Synced: $added added, $updated updated.")
+//                loadContacts()
+//            } catch (e: Exception) {
+//                _uiEvent.send("Error syncing contacts: ${e.message}")
+//            }
+//        }
+//    }
+
     fun loadContactById(contactId: Long) {
         viewModelScope.launch {
             getContactByIdUseCase(contactId).collect { contact ->
@@ -119,6 +133,41 @@ class ContactViewModel @Inject constructor(
                 _uiEvent.send("Contact created successfully!")
             } catch (e: Exception) {
                 _uiEvent.send("Error creating contact: ${e.message}")
+            }
+        }
+    }
+
+    fun addDevice(contact: Contact) {
+        viewModelScope.launch {
+            validate(contact)
+            if (!_formUiState.value.isValid) {
+                _uiEvent.send("Vui lòng sửa các lỗi trong form.")
+                return@launch
+            }
+
+            try {
+                var contactToSave = contact
+                if (!contact.photoUri.isNullOrBlank() && contact.photoUri.startsWith("content://")) {
+                    val copiedPath = ImageUtils.copyImageToInternalStorage(app, contact.photoUri.toUri())
+                    if (copiedPath != null) {
+                        contactToSave = contact.copy(photoUri = copiedPath)
+                    } else {
+                        _uiEvent.send("Lỗi khi sao chép ảnh.")
+                        contactToSave = contact.copy(photoUri = null)
+                    }
+                }
+                val appContact = insertContactUseCase(contactToSave)
+                val deviceContactId = addContactToDeviceUseCase(contact)
+                updateContactUseCase(appContact.copy(deviceId = deviceContactId))
+                val success = addContactToDeviceUseCase(contact)
+
+                if (success) {
+                    _uiEvent.send("Contact added to device successfully!")
+                } else {
+                    _uiEvent.send("Failed to add contact to device.")
+                }
+            } catch (e: Exception) {
+                _uiEvent.send("Error adding contact to device: ${e.message}")
             }
         }
     }

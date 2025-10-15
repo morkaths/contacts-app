@@ -1,6 +1,7 @@
 package com.morkath.contacts.data.local.database.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -44,10 +45,23 @@ interface ContactDao {
     suspend fun insertContact(contact: ContactEntity): Long
 
     /**
+     * Insert multiple contacts into the database.
+     * If a contact with the same ID already exists, it will be ignored.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(contacts: List<ContactEntity>)
+
+    /**
      * Update an existing contact in the database.
      */
     @Update
     suspend fun updateContact(contact: ContactEntity): Int
+
+    /**
+     * Update multiple contacts in the database.
+     */
+    @Update
+    suspend fun updateAll(contacts: List<ContactEntity>)
 
     /**
      * Delete contacts by their IDs.
@@ -55,4 +69,22 @@ interface ContactDao {
     @Query("""DELETE FROM contact WHERE id IN (:ids)""")
     fun deleteContact(ids: List<Long>): Int
 
+    /**
+     * Delete multiple contacts from the database.
+     */
+    @Delete
+    suspend fun deleteAll(contacts: List<ContactEntity>)
+
+
+    /**
+     * Get all contacts as a list (not a Flow).
+     */
+    @Query("""SELECT * FROM contact""")
+    suspend fun getAllContactsAsList(): List<ContactEntity>
+
+    /**
+     * Get a contact by its phone number.
+     */
+    @Query("""SELECT * FROM contact WHERE phone_number = :phoneNumber LIMIT 1""")
+    suspend fun getContactByPhoneNumber(phoneNumber: String): ContactEntity?
 }

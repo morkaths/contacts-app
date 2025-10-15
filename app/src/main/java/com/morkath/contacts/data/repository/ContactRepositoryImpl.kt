@@ -8,7 +8,6 @@ import com.morkath.contacts.data.mapper.toEntity
 import com.morkath.contacts.data.local.database.dao.ContactDao
 import com.morkath.contacts.domain.model.Contact
 import com.morkath.contacts.domain.repository.ContactRepository
-import com.morkath.contacts.domain.repository.DeviceContactDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -66,4 +65,5 @@ class ContactRepositoryImpl @Inject constructor(
             contactDao.deleteContact(ids) > 0
         }
     }
+
 }

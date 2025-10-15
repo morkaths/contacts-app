@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
 data class ContactEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long,
+    val deviceId: Long?,
     val name: String,
     @ColumnInfo(name = "phone_number")
     val phoneNumber: String?,

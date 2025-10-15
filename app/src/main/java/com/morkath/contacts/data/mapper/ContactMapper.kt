@@ -5,6 +5,7 @@ import com.morkath.contacts.domain.model.Contact
 
 fun Contact.toEntity(): ContactEntity = ContactEntity(
     id = id,
+    deviceId = deviceId,
     name = name,
     phoneNumber = phoneNumber,
     email = email,
@@ -17,6 +18,7 @@ fun Contact.toEntity(): ContactEntity = ContactEntity(
 
 fun ContactEntity.toDomain(): Contact = Contact(
     id = id,
+    deviceId = deviceId,
     name = name,
     phoneNumber = phoneNumber.orEmpty(),
     email = email,

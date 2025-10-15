@@ -56,6 +56,7 @@ dependencies {
     // Room components
     implementation(libs.androidx.room)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)

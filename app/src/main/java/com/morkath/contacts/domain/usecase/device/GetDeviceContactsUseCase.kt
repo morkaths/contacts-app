@@ -1,4 +1,4 @@
-package com.morkath.contacts.domain.usecase.contact
+package com.morkath.contacts.domain.usecase.device
 
 import com.morkath.contacts.domain.model.Contact
 import com.morkath.contacts.domain.repository.DeviceContactDataSource
