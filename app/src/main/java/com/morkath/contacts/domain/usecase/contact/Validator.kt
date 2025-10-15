@@ -9,16 +9,10 @@ data class ValidationResult(
 
 class ValidatorNameUseCase @Inject constructor() {
     operator fun invoke(name: String): ValidationResult {
-        val regex = Regex("^[\\p{L}0-9 .'-]+$")
         return if (name.isBlank()) {
             ValidationResult(
                 isValid = false,
                 errorMessage = "Name cannot be empty"
-            )
-        } else if (!name.matches(regex)) {
-            ValidationResult(
-                isValid = false,
-                errorMessage = "Name contains invalid characters"
             )
         } else {
             ValidationResult(isValid = true)

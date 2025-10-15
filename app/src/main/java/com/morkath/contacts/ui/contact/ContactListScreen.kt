@@ -44,28 +44,52 @@ fun ContactListScreen(
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted: Boolean ->
-            if (isGranted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            val readGranted = permissions[Manifest.permission.READ_CONTACTS] ?: false
+            val writeGranted = permissions[Manifest.permission.WRITE_CONTACTS] ?: false
+
+            if (readGranted) {
+                // Nếu có quyền đọc, tiến hành nhập danh bạ
                 viewModel.importDeviceContacts()
             } else {
+                // Nếu quyền đọc bị từ chối, hiển thị thông báo
                 scope.launch {
-                    snackbarHostState.showSnackbar("Bạn đã từ chối cấp quyền đọc danh bạ.")
+                    snackbarHostState.showSnackbar("Bạn đã từ chối quyền đọc danh bạ.")
+                }
+            }
+
+            if (!writeGranted) {
+                // Có thể hiển thị thông báo nếu quyền ghi bị từ chối (tùy chọn)
+                scope.launch {
+                    snackbarHostState.showSnackbar("Lưu ý: Bạn sẽ không thể đồng bộ liên hệ mới vào thiết bị.")
                 }
             }
         }
     )
 
     LaunchedEffect(Unit) {
-        // 1. Kiểm tra xem đã có quyền chưa
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_CONTACTS
+        // 1. Kiểm tra xem đã có các quyền cần thiết chưa
+        val hasReadPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
-        // 2. Nếu chưa có quyền, thì mới hiện hộp thoại xin quyền
-        if (!hasPermission) {
-            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        val hasWritePermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.WRITE_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        // 2. Tạo danh sách các quyền còn thiếu
+        val permissionsToRequest = mutableListOf<String>()
+        if (!hasReadPermission) {
+            permissionsToRequest.add(Manifest.permission.READ_CONTACTS)
+        }
+        if (!hasWritePermission) {
+            permissionsToRequest.add(Manifest.permission.WRITE_CONTACTS)
+        }
+
+        // 3. Nếu có quyền còn thiếu, hiện hộp thoại xin quyền
+        if (permissionsToRequest.isNotEmpty()) {
+            permissionLauncher.launch(permissionsToRequest.toTypedArray())
         }
     }
 

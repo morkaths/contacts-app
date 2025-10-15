@@ -1,8 +1,11 @@
 package com.morkath.contacts.ui.contact
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,10 +35,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.morkath.contacts.ui.theme.ContactsTheme
 import com.morkath.contacts.domain.model.Contact
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +54,7 @@ fun AddContactScreen(
         mutableStateOf(
             Contact(
                 id = 0,
+                deviceId = 0,
                 name = "",
                 phoneNumber = "",
                 email = null,
@@ -92,7 +98,8 @@ fun AddContactScreen(
                 actions = {
                     // Save button
                     Button(onClick = {
-                        viewModel.create(contact)
+                        // viewModel.create(contact)
+                        viewModel.add(contact)
                         onSave()
                     }) {
                         Text("Lưu")

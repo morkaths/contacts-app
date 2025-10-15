@@ -137,7 +137,7 @@ class ContactViewModel @Inject constructor(
         }
     }
 
-    fun addDevice(contact: Contact) {
+    fun add(contact: Contact) {
         viewModelScope.launch {
             validate(contact)
             if (!_formUiState.value.isValid) {
@@ -158,13 +158,15 @@ class ContactViewModel @Inject constructor(
                 }
                 val appContact = insertContactUseCase(contactToSave)
                 val deviceContactId = addContactToDeviceUseCase(contact)
-                updateContactUseCase(appContact.copy(deviceId = deviceContactId))
-                val success = addContactToDeviceUseCase(contact)
-
-                if (success) {
-                    _uiEvent.send("Contact added to device successfully!")
+                if (deviceContactId != null) {
+                    // Nếu thêm vào thiết bị thành công (có deviceId), cập nhật lại liên hệ trong app
+                    appContact?.let {
+                        updateContactUseCase(it.copy(deviceId = deviceContactId))
+                    }
+                    _uiEvent.send("Đã thêm liên hệ vào thiết bị thành công!")
                 } else {
-                    _uiEvent.send("Failed to add contact to device.")
+                    // Nếu thêm vào thiết bị thất bại (deviceId là null)
+                    _uiEvent.send("Không thể thêm liên hệ vào thiết bị.")
                 }
             } catch (e: Exception) {
                 _uiEvent.send("Error adding contact to device: ${e.message}")

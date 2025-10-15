@@ -14,8 +14,6 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.content.ContentProviderOperation
-import kotlin.compareTo
-import kotlin.toString
 
 @Singleton
 class DeviceContactDataSourceImpl @Inject constructor(
@@ -32,25 +30,31 @@ class DeviceContactDataSourceImpl @Inject constructor(
         )
 
         cursor?.use {
+            val idIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
             val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
             val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val photoUriIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+
             // Lấy các cột khác nếu cần (ID, Photo URI, ...)
 
             val deviceContactsMap = mutableMapOf<String, Contact>()
             while (it.moveToNext()) {
+                val contactId = if (idIndex != -1) it.getLong(idIndex) else 0L // Lấy giá trị ID
                 val name = if (nameIndex != -1) it.getString(nameIndex) else "N/A"
                 val phoneNumber = if (numberIndex != -1) it.getString(numberIndex) else "N/A"
+                val photoUri = if (photoUriIndex != -1) it.getString(photoUriIndex) else null
 
-                // Chuẩn hóa số điện thoại để tránh trùng lặp do định dạng khác nhau
+                // Chẩn hóa số điện thoại để tránh trùng lặp do định dạng khác nhau
                 val normalizedPhoneNumber = phoneNumber.replace(Regex("[\\s-]"), "")
                 if (!deviceContactsMap.containsKey(normalizedPhoneNumber)) {
                     deviceContactsMap[normalizedPhoneNumber] = Contact(
-                        id = 0,
+                        id = 0, // id này là của database local, sẽ được gán khi insert
+                        deviceId = contactId,
                         name = name,
                         phoneNumber = normalizedPhoneNumber,
                         email = null,
                         isFavorite = false,
-                        photoUri = null
+                        photoUri = photoUri
                     )
                 }
             }

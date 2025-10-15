@@ -89,17 +89,3 @@ fun ContactListItem(
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun ContactListItemPreview() {
-    ContactsTheme(
-        darkTheme = false,
-        dynamicColor = false
-    ) {
-        ContactListItem(
-            contact = Contact(1, "Preview Contact", "0123456789"),
-            onClick = { }
-        )
-    }
-}

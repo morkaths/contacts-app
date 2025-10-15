@@ -7,7 +7,7 @@ import javax.inject.Inject
 class AddContactToDeviceUseCase @Inject constructor(
     private val repository: DeviceContactDataSource
 ) {
-    suspend operator fun invoke(contact: Contact): Boolean {
+    suspend operator fun invoke(contact: Contact): Long? {
         return repository.addContactToDevice(contact)
     }
 }

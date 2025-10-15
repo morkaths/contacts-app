@@ -25,6 +25,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideDeviceContactDataSource(
-        @ApplicationContext context: Context
-    ): DeviceContactDataSource = DeviceContactDataSourceImpl(context)
+        @ApplicationContext context: Context,
+        contactDao: ContactDao
+    ): DeviceContactDataSource = DeviceContactDataSourceImpl(context, contactDao)
 }
